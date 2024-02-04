@@ -7,6 +7,7 @@ import uuid
 import time
 import torch
 import torchaudio
+import re
 
 
 #download for mecab
@@ -72,14 +73,15 @@ DEVICE_ASSERT_LANG = None
 supported_languages = config.languages
 
 def split_prompt_on_parts(text):
-    text_parts = text.split(r'\.[\s\n]')
+    text_parts = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s',text)
     text_parts = list(filter(None, text_parts))
 
     # For test purpose slicing
-    text_parts = text_parts[slice(0,2)]
+    # text_parts = text_parts[slice(0,2)]
 
     text_parts_len = len(text_parts)
     print('Parts ', text_parts_len)
+    print(text_parts)
     return text_parts
 
 def predict(
@@ -244,18 +246,19 @@ def predict(
             wavs=torch.Tensor([])
 
             text_parts = split_prompt_on_parts(prompt)
+            text_parts_len = len(text_parts)
             for idx,x in enumerate(text_parts):
                 print("Processing: ",idx,"/",text_parts_len)
                 x=x+'.'
                 out = model.inference(
-                  prompt,
+                  x,
                   language,
                   gpt_cond_latent,
                   speaker_embedding,
                   repetition_penalty=5.0,
                   temperature=0.75,
                 )
-                wav_part=torch.tensor(out["wav"]).unsqueeze(0)
+                wav_part=torch.tensor(out["wav"])
                 wavs = torch.cat((wavs,wav_part))
             torchaudio.save("output.wav", wavs.unsqueeze(0), 24000)
             
