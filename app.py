@@ -54,9 +54,6 @@ print("XTTS downloaded")
 
 config = XttsConfig()
 config.load_json(os.path.join(model_path, "config.json"))
-# JUST FOR TEST
-print("Max decoder steps " + config.max_decoder_steps)
-config.max_decoder_steps += 10
 
 model = Xtts.init_from_config(config)
 model.load_checkpoint(
