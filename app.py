@@ -11,7 +11,13 @@ import re
 
 
 #download for mecab
-os.system('python -m unidic download')
+try:
+    import unidic
+    print("unidic is already installed.")
+except ImportError:
+    # If the package is not installed, run the download command
+    print("unidic is not installed. Downloading...")
+    os.system('python -m unidic download')
 
 # By using XTTS you agree to CPML license https://coqui.ai/cpml
 os.environ["COQUI_TOS_AGREED"] = "1"
@@ -73,15 +79,19 @@ DEVICE_ASSERT_LANG = None
 supported_languages = config.languages
 
 def split_prompt_on_parts(text):
-    text_parts = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s',text)
+    text=re.sub(r'\.?\n{2,}','. ',text)
+    text=text.replace(';','. ').replace('• ','. ').replace('ds.','do spraw').replace(' r. ',' roku ').replace(' r.,',' roku,').replace(' r.',' roku.')
+    text_parts = re.split(r'(?<!\w\.[a-z].)(?<![A-Z][a-z])(?<=\.|\?|\!)\s',text)
     text_parts = list(filter(None, text_parts))
 
-    # For test purpose slicing
-    # text_parts = text_parts[slice(0,2)]
-
+    big_parts=[]
     text_parts_len = len(text_parts)
-    print('Parts ', text_parts_len)
-    print(text_parts)
+    for part in text_parts:
+        if len(part) > 300:
+            print(str(len(part))+' '+part)
+            big_parts.append(part)
+    print('Parts amount:', text_parts_len)
+    print('Big parts amount:', len(big_parts))
     return text_parts
 
 def predict(
@@ -237,9 +247,6 @@ def predict(
             latent_calculation_time = time.time() - t_latent
             # metrics_text=f"Embedding calculation time: {latent_calculation_time:.2f} seconds\n"
 
-            # temporary comma fix
-            prompt= re.sub("([^\x00-\x7F]|\w)(\.|\。|\?)",r"\1 \2\2",prompt)
-
             wav_chunks = []
             ## Direct mode
 
@@ -247,6 +254,9 @@ def predict(
 
             text_parts = split_prompt_on_parts(prompt)
             text_parts_len = len(text_parts)
+            # Just for test
+            # text_parts = text_parts[slice(0,10)]
+
 
             silence_duration = 500  # in milliseconds
             silence_samples = int(24000 * silence_duration / 1000)  # Assuming a sample rate of 24000
@@ -255,8 +265,6 @@ def predict(
                 part_nr = idx + 1
                 is_not_last_part = part_nr != text_parts_len
                 print("Processing: ",part_nr,"/",text_parts_len)
-                if is_not_last_part:
-                    x=x+'.'
                 out = model.inference(
                   x,
                   language,
