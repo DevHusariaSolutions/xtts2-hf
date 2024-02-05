@@ -247,6 +247,10 @@ def predict(
 
             text_parts = split_prompt_on_parts(prompt)
             text_parts_len = len(text_parts)
+
+            silence_duration = 200  # in milliseconds
+            silence_samples = int(24000 * silence_duration / 1000)  # Assuming a sample rate of 24000
+            silence = torch.zeros(1, silence_samples).squeeze(0)
             for idx,x in enumerate(text_parts):
                 print("Processing: ",idx,"/",text_parts_len)
                 x=x+'.'
@@ -258,7 +262,8 @@ def predict(
                   repetition_penalty=5.0,
                   temperature=0.75,
                 )
-                wav_part=torch.tensor(out["wav"])
+                wav_part=torch.tensor(out["wav"])  # Assuming a mono channel
+                wav_part = torch.cat((wav_part, silence))
                 wavs = torch.cat((wavs,wav_part))
             torchaudio.save("output.wav", wavs.unsqueeze(0), 24000)
             
